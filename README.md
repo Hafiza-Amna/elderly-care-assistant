@@ -4,6 +4,12 @@ An AI-powered concierge agent that tracks medication schedules, monitors daily w
 
 ---
 
+## Assets
+
+![Elderly Care Assistant — Architecture Diagram](assets/architecture.png)
+
+---
+
 ## Prerequisites
 
 - **Python 3.11** or higher
@@ -16,9 +22,10 @@ An AI-powered concierge agent that tracks medication schedules, monitors daily w
 
 1. **Clone the Repository**:
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/Hafiza-Amna/elderly-care-assistant.git
    cd elderly-care-assistant
    ```
+
 
 2. **Set Up Environment Variables**:
    Copy the example environment file and add your `GOOGLE_API_KEY`:
