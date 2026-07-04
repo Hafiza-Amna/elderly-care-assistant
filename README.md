@@ -6,7 +6,9 @@ An AI-powered concierge agent that tracks medication schedules, monitors daily w
 
 ## Assets
 
-![Elderly Care Assistant — Architecture Diagram](assets/architecture.png)
+![Elderly Care Assistant — Cover](assets/cover_banner.png)
+
+![Elderly Care Assistant — Multi-Agent Workflow Diagram](assets/workflow_diagram.png)
 
 ---
 
