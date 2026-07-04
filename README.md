@@ -12,6 +12,13 @@ An AI-powered concierge agent that tracks medication schedules, monitors daily w
 
 ---
 
+## Demo Script
+
+The spoken presentation script is available in [DEMO_SCRIPT.txt](DEMO_SCRIPT.txt).
+
+---
+
+
 ## Prerequisites
 
 - **Python 3.11** or higher
