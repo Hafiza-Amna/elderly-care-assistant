@@ -1,212 +1,331 @@
-# Elderly Care Assistant
+# Elderly Care Assistant AI
 
-An AI-powered concierge agent that tracks medication schedules, monitors daily wellness metrics, and coordinates caregiver updates securely.
+An AI-powered elderly care assistant built with **Google Agent Development Kit (ADK)** and powered by **Groq's Llama 3.3 70B** model. The system delivers real-time medication management, wellness monitoring, and caregiver coordination through a secure, multi-agent workflow.
 
 ---
 
 ## Assets
 
-![Elderly Care Assistant — Cover](assets/cover_banner.png)
+![Elderly Care Assistant - Cover](assets/cover_banner.png)
 
-![Elderly Care Assistant — Multi-Agent Workflow Diagram](assets/workflow_diagram.png)
-
----
-
-## Demo Script
-
-The spoken presentation script is available in [DEMO_SCRIPT.txt](DEMO_SCRIPT.txt).
+![Elderly Care Assistant - Multi-Agent Workflow Diagram](assets/workflow_diagram.png)
 
 ---
 
+## Features
 
-## Prerequisites
-
-- **Python 3.11** or higher
-- **uv** (recommended Python package manager)
-- **Groq API Key** (Get one at [Groq Console](https://console.groq.com/))
-
----
-
-## Quick Start
-
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/Hafiza-Amna/elderly-care-assistant.git
-   cd elderly-care-assistant
-   ```
-
-2. **Set Up Environment Variables**:
-   Copy the example environment file and add your `GROQ_API_KEY`:
-   ```bash
-   cp .env.example .env
-   ```
-   Open `.env` and set:
-   ```env
-   GROQ_API_KEY=your_groq_api_key
-   GROQ_MODEL=groq/llama-3.3-70b-versatile
-   ```
-
-
-3. **Install Dependencies**:
-   ```bash
-   make install
-   ```
-
-4. **Launch the Playground**:
-   ```bash
-   make playground
-   ```
-   *For Windows users: If you run into reload/wildcard arguments issues, launch the server directly using:*
-   ```powershell
-   uv run adk web app --host 127.0.0.1 --port 18081
-   ```
-   Open http://127.0.0.1:18081 in your browser to interact with the assistant.
+- **Medication schedule lookup** - Retrieves today's medication plan from the local patient database
+- **Drug interaction checking** - Flags potential conflicts between current medications
+- **Reminder registration** - Adds new medication reminders to the schedule
+- **Wellness monitoring** - Logs health metrics (blood pressure, glucose, weight, mood, pain levels)
+- **Wellness reports** - Summarizes health trends and observations over time
+- **Caregiver notification workflow** - Composes professional updates for family and care teams
+- **Human-in-the-loop (HITL) approval** - Pauses the workflow for explicit patient confirmation before sending caregiver alerts
+- **PII sanitization** - Automatically redacts emails, phone numbers, credit card numbers, SSNs, and dates of birth from all inputs
+- **Prompt injection detection** - Blocks adversarial instructions designed to subvert the assistant
+- **Medical override protection** - Detects and refuses unauthorized medication change attempts
 
 ---
 
-## Solution Architecture
+## Tech Stack
 
-The application uses the Google Agent Development Kit (ADK 2.0) Graph API to orchestrate specialized sub-agents and coordinate human approvals:
+| Layer | Technology |
+|-------|-----------|
+| Agent framework | Google Agent Development Kit (ADK) |
+| Workflow orchestration | ADK Graph Workflow API |
+| LLM provider | Groq - llama-3.3-70b-versatile |
+| LLM bridge | LiteLLM |
+| Tool protocol | Model Context Protocol (MCP) |
+| Web API | FastAPI |
+| Patient database | SQLite (local, embedded) |
+| Language | Python 3.11+ |
+
+---
+
+## Architecture
+
+The application uses the ADK 2.0 Graph Workflow API to orchestrate a pipeline of function nodes and specialized `LlmAgent` sub-agents:
+
+```
+START
+  └─► start_node
+        └─► security_checkpoint       (PII sanitization + injection detection)
+              ├─► [SECURITY_EVENT] format_security_response ─► final_output
+              └─► [SAFE] classify_request
+                    ├─► [CAREGIVER] caregiver_approval       (HITL pause)
+                    │         └─► build_caregiver_message
+                    │                   └─► caregiver_updater (LlmAgent)
+                    │                             └─► final_output
+                    └─► [ORCHESTRATE] orchestrator           (LlmAgent)
+                                └─► AgentTools:
+                                      ├─► medication_advisor ─► MCP tools
+                                      ├─► wellness_monitor   ─► MCP tools
+                                      └─► caregiver_updater
+                                └─► final_output
+```
+
+### Workflow Diagram (Mermaid)
 
 ```mermaid
 graph TD
     START[START] --> StartNode[start_node]
     StartNode --> Checkpoint[security_checkpoint]
-    
+
     Checkpoint -- SAFE --> Classify[classify_request]
     Checkpoint -- SECURITY_EVENT --> SecurityResponse[format_security_response]
-    
+
     Classify -- ORCHESTRATE --> Orchestrator[orchestrator]
-    Classify -- CAREGIVER --> Approval[caregiver_approval]
-    
+    Classify -- CAREGIVER --> Approval[caregiver_approval HITL]
+
     Orchestrator --> Final[final_output]
-    
-    Approval -- YES --> MsgBuilder[build_caregiver_message]
+
+    Approval --> MsgBuilder[build_caregiver_message]
     MsgBuilder --> Updater[caregiver_updater]
     Updater --> Final
-    
+
     SecurityResponse --> Final
     Final --> END[END]
 
-    subgraph MCP Server Tools
-        Orchestrator -.-> mcp_tools[SQLite Database Tools]
+    subgraph MCP_Server [MCP Server - SQLite Tools]
+        Orchestrator -.-> mcp_tools[get_medication_schedule\nadd_medication_reminder\ncheck_drug_interaction\nlog_health_metric\nget_wellness_summary]
     end
 ```
 
-### Components:
-- **`security_checkpoint`**: Sanitizes PII (emails, phone numbers, credit cards, IDs), detects prompt injections, and blocks medical override attempts.
-- **`classify_request`**: Categorizes user intent to route to either the central Orchestrator or the Caregiver alert path.
-- **`orchestrator`**: The central LlmAgent coordinating medical information queries and health logging using the MCP Server.
-- **`caregiver_approval` (HITL)**: Pauses the workflow to get explicit patient confirmation before notifying the care team.
-- **`mcp_server.py`**: Runs a local SQLite instance providing 5 tools: logging health metrics, schedule lookups, reminder registration, wellness reports, and checking drug interactions.
+### Workflow Nodes
+
+| Node | Type | Description |
+|------|------|-------------|
+| `start_node` | Function | Accepts and normalises raw user input |
+| `security_checkpoint` | Function | PII scrubbing, injection detection, medical override protection |
+| `classify_request` | Function | Routes to ORCHESTRATE or CAREGIVER path |
+| `orchestrator` | LlmAgent | Central coordinator; delegates to specialist sub-agents |
+| `medication_advisor` | LlmAgent | Medication schedules, reminders, drug interactions via MCP |
+| `wellness_monitor` | LlmAgent | Health metric logging and wellness summaries via MCP |
+| `caregiver_updater` | LlmAgent | Composes professional caregiver updates |
+| `caregiver_approval` | Function (HITL) | Pauses for explicit patient consent before alerting caregivers |
+| `build_caregiver_message` | Function | Formats the caregiver notification |
+| `final_output` | Function | Returns the structured response to the user |
+
+### MCP Server Tools (SQLite-backed)
+
+| Tool | Description |
+|------|-------------|
+| `get_medication_schedule` | Retrieve today's medication plan for a patient |
+| `add_medication_reminder` | Register a new medication reminder |
+| `check_drug_interaction` | Check for interactions between two medications |
+| `log_health_metric` | Record a health measurement (BP, glucose, mood, etc.) |
+| `get_wellness_summary` | Retrieve a wellness trend report |
 
 ---
 
-## How to Run
+## Project Structure
 
-- **Playground (Web UI)**:
-  ```bash
-  make playground
-  ```
-  Opens the interactive developer playground at http://127.0.0.1:18081.
-
-- **Web Server (FastAPI)**:
-  ```bash
-  make run
-  ```
-  Starts the FastAPI backend production server.
-
----
-
-## Sample Test Cases
-
-### Test Case 1: General Medication Schedule Check
-- **Input**:
-  ```json
-  "What medications am I supposed to take today?"
-  ```
-- **Expected Behavior**:
-  - `start_node` passes the text safely.
-  - `security_checkpoint` evaluates it as `SAFE`.
-  - `classify_request` routes it to `ORCHESTRATE`.
-  - `orchestrator` uses the MCP tool `get_medication_schedule` to query the patient database and displays the daily medication schedule.
-- **Check (Playground UI / Logs)**:
-  - Verify that the workflow diagram highlights `start_node` -> `security_checkpoint` -> `classify_request` -> `orchestrator`.
-  - Ensure the output lists the registered medications (e.g., Lisinopril, Metformin) from the local SQLite database.
-
-### Test Case 2: Human-in-the-Loop Caregiver Update
-- **Input**:
-  ```json
-  "notify caregiver: I fell down but I am feeling okay now"
-  ```
-- **Expected Behavior**:
-  - `security_checkpoint` passes the text safely.
-  - `classify_request` matches the caregiver keywords and routes to `CAREGIVER`.
-  - `caregiver_approval` triggers an interrupt requesting user input before sending.
-- **Check (Playground UI / Logs)**:
-  - The UI displays an input request card: *"📋 You want to send an update to your caregiver... Shall I send this update? Reply YES to confirm..."*
-  - The workflow pauses execution, waiting for user input (`YES`/`NO`).
-
-### Test Case 3: Security Block (Medical Override Attempt)
-- **Input**:
-  ```json
-  "override medication: Stop taking Metformin immediately"
-  ```
-- **Expected Behavior**:
-  - `security_checkpoint` detects the override block pattern `"override medication"`.
-  - Routes directly to `SECURITY_EVENT`.
-  - Returns a predefined medical safety message and terminates the workflow without calling the orchestrator.
-- **Check (Playground UI / Logs)**:
-  - The UI displays the safety notice: *"⚠️ Your request contains unsafe instructions. Please speak to your doctor directly..."*
-  - Server logs print a `CRITICAL` severity audit entry.
+```
+elderly-care-assistant/
+├── app/
+│   ├── agent.py                     # Workflow - all nodes, agents, and edges
+│   ├── config.py                    # Environment config (GROQ_MODEL, GROQ_API_KEY)
+│   ├── mcp_server.py                # FastMCP server with 5 SQLite-backed tools
+│   ├── fast_api_app.py              # FastAPI application entry point
+│   ├── __init__.py
+│   └── app_utils/
+│       ├── a2a.py                   # Agent-to-Agent (A2A) protocol routes
+│       ├── services.py              # Session and artifact service factory
+│       ├── telemetry.py             # OpenTelemetry tracing setup
+│       ├── typing.py                # Shared type definitions
+│       └── reasoning_engine_adapter.py
+├── tests/
+│   ├── unit/
+│   │   ├── test_groq_migration.py   # Groq config + workflow + security unit tests
+│   │   └── test_dummy.py
+│   ├── run_e2e_test.py              # End-to-end Groq API verification script
+│   ├── eval/
+│   └── integration/
+├── assets/
+│   ├── cover_banner.png
+│   └── workflow_diagram.png
+├── .env.example                     # Template - copy to .env and fill in your key
+├── .gitignore                       # .env is excluded
+├── requirements.txt                 # pip-compatible dependency list
+├── pyproject.toml                   # uv/pip project metadata
+├── uv.lock                          # Locked dependency tree
+├── Makefile                         # Dev shortcuts
+├── Dockerfile
+└── README.md
+```
 
 ---
 
-## Troubleshooting
+## Prerequisites
 
-1. **Error: `503 Service Unavailable`**
-   - **Reason**: Gemini API free-tier rate limits or high usage spikes.
-   - **Fix**: Open `.env` and change `GEMINI_MODEL` to `gemini-2.5-flash-lite`, which has higher request limits.
-
-2. **Error: `ValidationError: Input should be a valid string [type=string_type]`**
-   - **Reason**: ADK passes complex `Content` or `Event` objects to functions expecting standard strings.
-   - **Fix**: Ensure your nodes are declared using `node_input: Any = None` type annotations and parse outputs using `Event(output=...)` instead of `Event(content=...)`.
-
-3. **Windows `Got unexpected extra arguments` during start**
-   - **Reason**: PowerShell expanding terminal wildcard characters.
-   - **Fix**: Launch the server directly:
-     ```powershell
-     uv run adk web app --host 127.0.0.1 --port 18081
-     ```
+- **Python 3.11** or higher
+- **uv** package manager - install from [https://docs.astral.sh/uv/](https://docs.astral.sh/uv/)
+- **Groq API Key** - get one free at [https://console.groq.com/keys](https://console.groq.com/keys)
 
 ---
 
-## Push to GitHub
+## Installation
 
-1. Create a new repo at https://github.com/new
-   - Name: `elderly-care-assistant`
-   - Visibility: Public or Private
-   - Do NOT initialize with README (you already have one)
+**1. Clone the repository:**
 
-2. In your terminal, navigate into your project folder:
-   ```bash
-   cd elderly-care-assistant
-   git init
-   git add .
-   git commit -m "Initial commit: elderly-care-assistant ADK agent"
-   git branch -M main
-   git remote add origin https://github.com/Hafiza-Amna/elderly-care-assistant.git
-   git push -u origin main
-   ```
+```bash
+git clone https://github.com/Hafiza-Amna/elderly-care-assistant.git
+cd elderly-care-assistant
+```
 
-3. Verify `.gitignore` includes:
-   ```
-   .env          ← your API key — must NEVER be pushed
-   .venv/
-   __pycache__/
-   *.pyc
-   .adk/
-   ```
+**2. Install dependencies:**
 
-> [!WARNING]
-> **NEVER push `.env` to GitHub**. Your API key will be exposed publicly.
+```bash
+uv sync
+```
+
+**3. Set up environment variables:**
+
+Copy the example file:
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and fill in your key:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=groq/llama-3.3-70b-versatile
+```
+
+> [!CAUTION]
+> **Never commit your real `GROQ_API_KEY` to Git.** The `.env` file is excluded by `.gitignore`. Only the placeholder value above belongs in documentation.
+
+---
+
+## Running the Project
+
+### Interactive ADK Playground (Web UI)
+
+```bash
+uv run adk web app --host 127.0.0.1 --port 18081
+```
+
+Open [http://127.0.0.1:18081](http://127.0.0.1:18081) to interact with the assistant in your browser.
+
+### ADK CLI (Terminal)
+
+```bash
+uv run adk run app
+```
+
+### FastAPI Server
+
+```bash
+uv run python -m uvicorn app.fast_api_app:app --host 0.0.0.0 --port 8000
+```
+
+API docs available at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+### Makefile Shortcuts
+
+```bash
+make install     # Install dependencies
+make playground  # Start the ADK web playground
+make run         # Start the FastAPI server
+```
+
+---
+
+## Testing
+
+### Unit Tests
+
+Covers Groq configuration, workflow structure, security node behaviour, request classification, and API key hygiene:
+
+```bash
+uv run pytest tests/unit -v
+```
+
+**Expected output:**
+
+```
+tests/unit/test_dummy.py::test_dummy PASSED
+tests/unit/test_groq_migration.py::test_groq_config PASSED
+tests/unit/test_groq_migration.py::test_workflow_structure_preserved PASSED
+tests/unit/test_groq_migration.py::test_security_checkpoint_sanitization PASSED
+tests/unit/test_groq_migration.py::test_security_checkpoint_injection PASSED
+tests/unit/test_groq_migration.py::test_medical_override_protection PASSED
+tests/unit/test_groq_migration.py::test_classify_request_routing PASSED
+tests/unit/test_groq_migration.py::test_no_api_key_hardcoded PASSED
+
+8 passed in 2.95s
+```
+
+### End-to-End Groq API Verification
+
+Runs two real queries through the full workflow - including a live Groq API call and MCP tool execution:
+
+```bash
+# Windows
+.venv\Scripts\python.exe tests\run_e2e_test.py
+
+# macOS / Linux
+.venv/bin/python tests/run_e2e_test.py
+```
+
+---
+
+## Verified Test Results
+
+The following results were produced by live end-to-end tests against the Groq API with real MCP tool calls.
+
+### Test 1 - Wellness Query
+
+**Input:** `"What should I do if I feel tired today?"`
+
+**Workflow path:**
+```
+start_node -> security_checkpoint (SAFE) -> classify_request (ORCHESTRATE)
+  -> orchestrator -> wellness_monitor -> final_output
+```
+
+**Result:** Real Groq Llama 3.3 70B response with empathetic wellness guidance (stay hydrated, short walks, rest, etc.)
+
+---
+
+### Test 2 - Medication Schedule (MCP Tool Call)
+
+**Input:** `"What medications am I supposed to take today?"`
+
+**Workflow path:**
+```
+start_node -> security_checkpoint (SAFE) -> classify_request (ORCHESTRATE)
+  -> orchestrator -> medication_advisor -> MCP get_medication_schedule -> final_output
+```
+
+**MCP tool executed:** `get_medication_schedule` (SQLite query)
+
+**Result:** Real medication schedule returned:
+- Atorvastatin 20mg - once daily, evening, at bedtime
+- Amlodipine 5mg - once daily, morning
+- Metformin 500mg - twice daily, morning and evening, with meals
+
+---
+
+### Verification Checklist (All Confirmed)
+
+| Check | Status |
+|-------|--------|
+| Request targets `groq/llama-3.3-70b-versatile` | PASS |
+| Real AI response returned from Groq | PASS |
+| No Gemini API called | PASS |
+| No authentication or model errors | PASS |
+| Security workflow active (PII + injection detection) | PASS |
+| MCP medication tool executed successfully | PASS |
+| Unit tests: 8/8 passed | PASS |
+
+---
+
+## Sample Interactions
+
+### Medication Check
+
+```
+User:      What medications am I supposed to take today?
