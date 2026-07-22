@@ -1,0 +1,129 @@
+﻿Usage: adk deploy agent_engine [OPTIONS] AGENT
+
+  Deploys an agent to Agent Engine.
+
+  Example:
+
+      # With Express Mode API Key
+      adk deploy agent_engine --api_key=[api_key] my_agent
+
+      # With Google Cloud Project and Region
+      adk deploy agent_engine --project=[project] --region=[region]
+        --display_name=[app_name] my_agent
+
+Options:
+  --api_key TEXT                  Optional. The API key to use for Express
+                                  Mode. If not provided, the API key from the
+                                  GOOGLE_API_KEY environment variable will be
+                                  used. It will only be used if
+                                  GOOGLE_GENAI_USE_ENTERPRISE is true. (It
+                                  will override GOOGLE_API_KEY in the .env
+                                  file if it exists.)
+  --project TEXT                  Optional. Google Cloud project to deploy the
+                                  agent. It will override GOOGLE_CLOUD_PROJECT
+                                  in the .env file (if it exists). It will be
+                                  ignored if api_key is set.
+  --region TEXT                   Optional. Google Cloud region to deploy the
+                                  agent. It will override
+                                  GOOGLE_CLOUD_LOCATION in the .env file (if
+                                  it exists). It will be ignored if api_key is
+                                  set.
+  --staging_bucket TEXT           Deprecated. This argument is no longer
+                                  required or used.
+  --agent_engine_id TEXT          Optional. ID of the Agent Engine instance to
+                                  update if it exists (default: None, which
+                                  means a new instance will be created). If
+                                  project and region are set, this should be
+                                  the resource ID, and the corresponding
+                                  resource name in Agent Engine will be: `proj
+                                  ects/{project}/locations/{region}/reasoningE
+                                  ngines/{agent_engine_id}`. If api_key is
+                                  set, then agent_engine_id is required to be
+                                  the full resource name (i.e. `projects/*/loc
+                                  ations/*/reasoningEngines/*`).
+  --trace_to_cloud / --no-trace_to_cloud
+                                  NOTE: This flag is deprecated and will be
+                                  removed in the future.
+  --otel_to_cloud                 Optional. Whether to enable OpenTelemetry
+                                  for Agent Engine.
+  --display_name TEXT             Optional. Display name of the agent in Agent
+                                  Engine.  [default: ""]
+  --description TEXT              Optional. Description of the agent in Agent
+                                  Engine.  [default: ""]
+  --adk_app TEXT                  NOTE: This flag is deprecated and will be
+                                  removed in the future.
+  --temp_folder TEXT              Optional. Temp folder for the generated
+                                  Agent Engine source files. If the folder
+                                  already exists, its contents will be
+                                  removed. (default: a timestamped folder in
+                                  the current working directory).
+  --adk_app_object TEXT           NOTE: This flag is deprecated and will be
+                                  removed in the future.
+  --env_file TEXT                 NOTE: This flag is deprecated and will be
+                                  removed in the future.
+  --requirements_file TEXT        NOTE: This flag is deprecated and will be
+                                  removed in the future.
+  --absolutize_imports BOOLEAN    NOTE: This flag is deprecated and will be
+                                  removed in the future.
+  --agent_engine_config_file TEXT
+                                  Optional. The filepath to the
+                                  `.agent_engine_config.json` file to use. The
+                                  values in this file will be overridden by
+                                  the values set by other flags. (default: the
+                                  `.agent_engine_config.json` file in the
+                                  `agent` directory, if any.)
+  --validate-agent-import / --no-validate-agent-import
+                                  NOTE: This flag is deprecated and will be
+                                  removed in the future.
+  --skip-agent-import-validation  NOTE: This flag is deprecated and will be
+                                  removed in the future.
+  --trigger_sources TEXT          Optional. Comma-separated list of trigger
+                                  sources to enable (e.g., 'pubsub,eventarc').
+                                  Registers /trigger/* endpoints for batch and
+                                  event-driven agent invocations.
+  --adk_version TEXT              Optional. The ADK version used in Agent
+                                  Engine deployment. (default:  the version in
+                                  the dev environment)  [default: 2.3.0]
+  --session_service_uri TEXT      Optional. The URI of the session service. If
+                                  set, ADK uses this service.
+                                  
+                                  If unset, ADK chooses a default session service (see
+                                  --use_local_storage).
+                                  - Use 'agentengine://<agent_engine>' to connect to Agent Engine
+                                    sessions. <agent_engine> can either be the full qualified resource
+                                    name 'projects/abc/locations/us-central1/reasoningEngines/123' or
+                                    the resource id '123'.
+                                  - Use 'memory://' to run with the in-memory session service.
+                                  - Use 'sqlite://<path_to_sqlite_file>' to connect to a SQLite DB.
+                                  - See https://docs.sqlalchemy.org/en/20/core/engines.html#backend-specific-urls
+                                    for supported database URIs.
+  --artifact_service_uri TEXT     Optional. The URI of the artifact service.
+                                  If set, ADK uses this service.
+                                  
+                                  If unset, ADK chooses a default artifact service (see
+                                  --use_local_storage).
+                                  - Use 'gs://<bucket_name>' to connect to the GCS artifact service.
+                                  - Use 'memory://' to force the in-memory artifact service.
+                                  - Use 'file://<path>' to store artifacts in a custom local directory.
+  --use_local_storage / --no_use_local_storage
+                                  Optional. Whether to use local .adk storage
+                                  when --session_service_uri and
+                                  --artifact_service_uri are unset. Cannot be
+                                  combined with explicit service URIs. When
+                                  the agents directory isn't writable (common
+                                  in Cloud Run/Kubernetes), ADK falls back to
+                                  in-memory unless overridden by
+                                  ADK_FORCE_LOCAL_STORAGE=1 or
+                                  ADK_DISABLE_LOCAL_STORAGE=1.  [default:
+                                  no_use_local_storage]
+  --memory_service_uri TEXT       Optional. The URI of the memory service. If
+                                  set, ADK uses this service.
+                                  
+                                  If unset, ADK chooses a default memory service.
+                                  - Use 'rag://<rag_corpus_id>' to connect to Vertex AI Rag Memory Service.
+                                  - Use 'agentengine://<agent_engine>' to connect to Agent Engine
+                                    sessions. <agent_engine> can either be the full qualified resource
+                                    name 'projects/abc/locations/us-central1/reasoningEngines/123' or
+                                    the resource id '123'.
+                                  - Use 'memory://' to force the in-memory memory service.
+  --help                          Show this message and exit.

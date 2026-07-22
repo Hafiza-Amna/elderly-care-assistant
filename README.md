@@ -23,7 +23,7 @@ The spoken presentation script is available in [DEMO_SCRIPT.txt](DEMO_SCRIPT.txt
 
 - **Python 3.11** or higher
 - **uv** (recommended Python package manager)
-- **Gemini API Key** (Get one at [Google AI Studio](https://aistudio.google.com/apikey))
+- **Groq API Key** (Get one at [Groq Console](https://console.groq.com/))
 
 ---
 
@@ -35,17 +35,17 @@ The spoken presentation script is available in [DEMO_SCRIPT.txt](DEMO_SCRIPT.txt
    cd elderly-care-assistant
    ```
 
-
 2. **Set Up Environment Variables**:
-   Copy the example environment file and add your `GOOGLE_API_KEY`:
+   Copy the example environment file and add your `GROQ_API_KEY`:
    ```bash
    cp .env.example .env
    ```
    Open `.env` and set:
    ```env
-   GOOGLE_API_KEY=your_actual_api_key_here
-   GEMINI_MODEL=gemini-2.5-flash-lite
+   GROQ_API_KEY=your_groq_api_key
+   GROQ_MODEL=groq/llama-3.3-70b-versatile
    ```
+
 
 3. **Install Dependencies**:
    ```bash

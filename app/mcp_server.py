@@ -61,7 +61,7 @@ def get_db():
 # ── MCP Server ────────────────────────────────────────────────────────────────
 mcp = FastMCP(
     name="elderly-care-mcp",
-    description="MCP server providing health tracking, medication management, and wellness tools for elderly care.",
+    instructions="MCP server providing health tracking, medication management, and wellness tools for elderly care.",
 )
 
 

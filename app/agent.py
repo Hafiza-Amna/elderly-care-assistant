@@ -11,6 +11,7 @@ from typing import Any
 
 
 from google.adk.agents import LlmAgent
+from google.adk.models.lite_llm import LiteLlm
 from google.adk.apps import App
 from google.adk.events import Event, EventActions, RequestInput
 from google.adk.tools import AgentTool
@@ -23,6 +24,14 @@ from app.config import config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ── Groq model with parallel_tool_calls=False ─────────────────────────────────
+# Groq's Llama 3.3 70B can generate malformed XML-style tool calls when
+# parallel_tool_calls is enabled. Disabling it forces sequential JSON tool use.
+groq_model = LiteLlm(
+    model=config.model,
+    parallel_tool_calls=False,
+)
 
 # ── MCP Toolset (wired into medication_advisor and wellness_monitor) ──────────
 _mcp_server_path = str(Path(__file__).parent / "mcp_server.py")
@@ -43,7 +52,7 @@ mcp_toolset = MCPToolset(
 
 medication_advisor = LlmAgent(
     name="medication_advisor",
-    model=config.model,
+    model=groq_model,
     description="Handles medication schedules, reminders, and drug interaction queries for elderly patients.",
     instruction="""You are a compassionate medication management specialist for elderly care.
 Your responsibilities:
@@ -64,7 +73,7 @@ Always use the patient's name from the conversation context.""",
 
 wellness_monitor = LlmAgent(
     name="wellness_monitor",
-    model=config.model,
+    model=groq_model,
     description="Tracks wellness metrics, daily activity, and health observations for elderly patients.",
     instruction="""You are a caring wellness and health monitoring specialist for elderly care.
 Your responsibilities:
@@ -85,7 +94,7 @@ Use simple language without medical jargon.""",
 
 caregiver_updater = LlmAgent(
     name="caregiver_updater",
-    model=config.model,
+    model=groq_model,
     description="Composes professional, concise updates and alerts for caregivers and family members.",
     instruction="""You are a professional caregiver communication specialist.
 Your responsibilities:
@@ -109,7 +118,7 @@ Format the update as:
 
 orchestrator = LlmAgent(
     name="orchestrator",
-    model=config.model,
+    model=groq_model,
     description="Main orchestrator that understands patient requests and delegates to specialized agents.",
     instruction="""You are the central orchestrator for an elderly care assistant system.
 Analyze the patient's request and delegate to the appropriate specialist:
